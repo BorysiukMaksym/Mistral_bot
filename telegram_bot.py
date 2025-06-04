@@ -1,7 +1,10 @@
-import asyncio
 import logging
 import sys
+import asyncio
 from os import getenv
+
+if sys.platform.startswith('win'):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from aiogram import Bot, Dispatcher, html
 from aiogram.client.default import DefaultBotProperties
@@ -11,16 +14,12 @@ from aiogram.types import Message
 
 from llm_client import main_llm
 from settings import TOKEN_BOT
-
 from database import get_session
 from memory import save_message, get_chat_history
-
 from rag.rag_logic import retrieve_context
-
+from database_rag import init_pgvector, ensure_pgvector_extension, get_pgvector_session
 
 TOKEN = TOKEN_BOT
-
-# All handlers should be attached to the Router (or Dispatcher)
 
 dp = Dispatcher()
 
@@ -30,11 +29,6 @@ async def command_start_handler(message: Message) -> None:
     """
     This handler receives messages with /start command
     """
-    # Most event objects have aliases for API methods that can be called in events' context
-    # For example if you want to answer to incoming message you can use message.answer(...) alias
-    # and the target chat will be passed to :ref:aiogram.methods.send_message.SendMessage
-    # method automatically or call API method directly via
-    # Bot instance: bot.send_message(chat_id=message.chat.id, ...)
     await message.answer(f"Hello, {html.bold(message.from_user.full_name)}!")
 
 
@@ -43,18 +37,18 @@ async def echo_handler(message: Message) -> None:
     user_id = message.from_user.id
     content = message.text
 
+    # Сесія для збереження повідомлень
     async for session in get_session():
         await save_message(session, user_id, "user", content)
-
         history = await get_chat_history(session, user_id, limit=10)
 
         context = [{"role": msg.role, "content": msg.content} for msg in history]
         context.append({"role": "user", "content": content})
 
-        # >>> Отримуємо зовнішній контекст з бази документів (RAG)
-        retrieved_chunks = await retrieve_context(content)
+        # Сесія для пошуку в RAG базі
+        async for rag_session in get_pgvector_session():
+            retrieved_chunks = await retrieve_context(content, rag_session)
 
-        # >>> Додаємо у вигляді системного повідомлення
         if retrieved_chunks:
             combined = "\n---\n".join(retrieved_chunks)
             context.insert(0, {"role": "system", "content": f"Контекст:\n{combined}"})
@@ -66,10 +60,13 @@ async def echo_handler(message: Message) -> None:
 
 
 async def main() -> None:
-    # Initialize Bot instance with default bot properties which will be passed to all API calls
+    logging.info("Bot is starting...")
+
+    await ensure_pgvector_extension()
+    await init_pgvector()
+
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
-    # And the run events dispatching
     await dp.start_polling(bot)
 
 
