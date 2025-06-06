@@ -9,7 +9,8 @@ class Document(Base):
 
     id = Column(Integer, primary_key=True)
     content = Column(String, nullable=False)
-    embedding = Column(Vector(384), nullable=False)
+    embedding = Column(Vector(768), nullable=False)
+    filename = Column(String, nullable=True)
 
 class ChatHistory(Base):
     __tablename__ = "chat_history"

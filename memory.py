@@ -7,7 +7,7 @@ async def save_message(session: AsyncSession, user_id: int, role: str, content: 
     session.add(message)
     await session.commit()
 
-async def get_chat_history(session: AsyncSession, user_id: int, limit: int = 10):
+async def get_chat_history(session: AsyncSession, user_id: int, limit: int = 5):
     result = await session.execute(
         select(ChatHistory).where(ChatHistory.user_id == user_id).order_by(ChatHistory.created_at.desc()).limit(limit)
     )

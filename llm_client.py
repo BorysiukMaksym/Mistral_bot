@@ -12,9 +12,12 @@ async def main_llm(messages: list) -> str:
         "messages": messages,
         "stream": False,
         "max_tokens": 512,
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "presence_penalty": 0.1,
     }
 
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=60) as client:
         response = await client.post(LLM_API_URL, headers=HEADERS, json=payload)
         response.raise_for_status()
         data = response.json()
