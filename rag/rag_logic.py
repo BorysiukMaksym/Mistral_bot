@@ -1,6 +1,6 @@
 from rag.embedder import embed_text
 from rag.vector_db import search_similar_documents
-from database_rag import get_pgvector_session
+
 import logging
 logger = logging.getLogger(__name__)
 

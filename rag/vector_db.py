@@ -5,8 +5,6 @@ from models import Document
 from pgvector.sqlalchemy import Vector
 import numpy as np
 
-
-# Отримуємо logger для поточного модуля
 logger = logging.getLogger(__name__)
 
 async def search_similar_documents(session: AsyncSession, query_embedding: list[float], limit: int = 3) -> list[str]:
