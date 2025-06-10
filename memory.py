@@ -12,5 +12,5 @@ async def get_chat_history(session: AsyncSession, user_id: int, limit: int = 5):
         select(ChatHistory).where(ChatHistory.user_id == user_id).order_by(ChatHistory.created_at.desc()).limit(limit)
     )
     messages = result.scalars().all()
-    # Віддаємо у правильному порядку
+
     return list(reversed(messages))
